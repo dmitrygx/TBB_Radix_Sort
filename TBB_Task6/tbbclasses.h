@@ -107,6 +107,9 @@ public:
 	}
 };
 
+double* TBBRadixSortMSDStack(uint count, stack<double> st, uint precision, uint radix);
+double* TBBRadixSortMSDStackDouble(uint count, stack<double> st, uint precision, uint radix);
+
 class TBBSortMainLoop
 {
 	stack<double>* stackNeg;
@@ -130,7 +133,6 @@ public:
 	void operator() (const blocked_range<int>& r) const
 	{
 		uint begin = r.begin(), end = r.end();
-		int j = 0;
 		if (!switchPosToNeg)
 		{
 			for (int i = r.end(); i >= r.begin(); --i)
@@ -138,7 +140,7 @@ public:
 				double* res = TBBRadixSortMSDStack(count, stackPos[i], precision, radix + 1);
 				if (NULL != res)
 				{
-					for (j = 0; j < (int)stackPos[i].size(); j++)
+					for (int j = 0; j < (int)stackPos[i].size(); j++)
 					{
 						result[counter] = res[j];
 						counter++;
@@ -153,7 +155,7 @@ public:
 				double* res = TBBRadixSortMSDStack(count, stackNeg[i], precision, radix + 1);
 				if (NULL != res)
 				{
-					for (j = (int)stackNeg[i].size() - 1; j >= 1; --j)
+					for (int j = (int)stackNeg[i].size() - 1; j >= 1; --j)
 					{
 						result[counter] = res[j] * (-1);
 						counter++;

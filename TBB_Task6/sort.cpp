@@ -209,6 +209,7 @@ double* TBBRadixSortMSD(const double* array, const uint len, uint precision, uin
 	//}
 	parallel_for(blocked_range<int>(0, (int)(NUM_VAL - 1), (size_t)grainsize), TBBSortMainLoop(result, len, stackPos,
 		stackNeg, radix, count, counter, precision, 0));
+
 	parallel_for(blocked_range<int>(0, (int)NUM_VAL, (size_t)grainsize), TBBSortMainLoop(result, len, stackPos,
 		stackNeg, radix, count, counter, precision, 1));
 	return result;
