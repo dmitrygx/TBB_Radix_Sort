@@ -48,7 +48,7 @@ static uint TBBGetMaxCountOfDigits(const double* numbers, uint len, int* integ, 
 	return max;
 }
 
-static double* TBBRadixSortMSDStackDouble(uint count, stack<double> st, uint precision, uint radix)
+double* TBBRadixSortMSDStackDouble(uint count, stack<double> st, uint precision, uint radix)
 {
 	uint len = st.size();
 	double* result = TBBGetMemoryPool()->TBBAlloc(len);
@@ -101,7 +101,7 @@ static double* TBBRadixSortMSDStackDouble(uint count, stack<double> st, uint pre
 	return result;
 }
 
-static double* TBBRadixSortMSDStack(uint count, stack<double> st, uint precision, uint radix)
+double* TBBRadixSortMSDStack(uint count, stack<double> st, uint precision, uint radix)
 {
 	uint len = st.size();
 	double* result = TBBGetMemoryPool()->TBBAlloc(len);
@@ -161,85 +161,56 @@ double* TBBRadixSortMSD(const double* array, const uint len, uint precision, uin
 	double* result = TBBGetMemoryPool()->TBBAlloc(len);
 
 	stack<double> stackNeg[NUM_VAL];
-	stack<double> stack[NUM_VAL];
+	stack<double> stackPos[NUM_VAL];
 
 	int integ[1];
 	double fract[1];
+	int grainsize = 2;
 	uint count = TBBGetMaxCountOfDigits(array, len, integ, fract);
 	double val = 0;
 
-	//create_lock(mutex);
-	//init_lock(&mutex);
-#pragma omp parallel shared(stack, stackNeg/*, mutex*/) private(val)
-	{
-#pragma omp for schedule(dynamic, CHUNK) nowait
-		for (int i = 0; i < len; ++i)
-		{
-			//lock(&mutex);
-			val = array[i];
-			if (val >= 0.0)
-			{
-#pragma omp critical
-			{
-				stack[(int)(val / pow(10, count - radix))].push(val);
-			}
-			}
-			else
-			{
-				val = val * (-1);
-#pragma omp critical
-				{
-					stackNeg[(int)(val / pow(10, count - radix))].push(val);
-				}
-			}
-			//unlock(&mutex);
-		}
-	}
-	//destroy_lock(&mutex);
+	parallel_for(blocked_range<int>(0, (int)len, (size_t)grainsize), TBBStackDistribution(array, len, stackPos,
+		stackNeg, radix, count));
+	//for (uint i = 0; i < 10; ++i)
+	//{
+	//	while (!stackPos[i].empty())
+	//	{
+	//		cout << i << ": " << stackPos[i].top() << endl;
+	//		stackPos[i].pop();
+	//	}
+	//}
 	uint counter = 0;
-	int j = 0;
-#pragma omp parallel shared(counter,  stack) private(j)
-	{
-#pragma omp for schedule(dynamic, CHUNK)
-		for (int i = NUM_VAL - 1; i >= 0; --i)
-		{
-			double* res = TBBRadixSortMSDStack(count, stack[i], precision, radix + 1);
-			if (NULL != res)
-			{
-				//#pragma omp parallel shared(counter,  stack) private(j)
-				{
-					//#pragma omp for schedule(dynamic, CHUNK) nowait
-					for (j = 0; j < (int)stack[i].size(); j++)
-					{
-						result[counter] = res[j];
-						counter++;
-					}
-				}
-			}
-		}
-	}
-#pragma omp parallel shared(stackNeg) private(j)
-	{
-#pragma omp for schedule(dynamic, CHUNK)
-		for (int i = 0; i < NUM_VAL; ++i)
-		{
-			double* res = TBBRadixSortMSDStack(count, stackNeg[i], precision, radix + 1);
-			if (NULL != res)
-			{
-				//#pragma omp parallel shared(counter, stackNeg) private(j)
-				{
-					//#pragma omp for schedule(dynamic, CHUNK) nowait 
-					for (j = (int)stackNeg[i].size() - 1; j >= 1; --j)
-					{
-						result[counter] = res[j] * (-1);
-						counter++;
-					}
-				}
-				result[counter] = res[0] * (-1);
-				counter++;
-			}
-		}
-	}
+	//int j = 0;
+	//for (int i = NUM_VAL - 1; i >= 0; --i)
+	//{
+	//	double* res = TBBRadixSortMSDStack(count, stackPos[i], precision, radix + 1);
+	//	if (NULL != res)
+	//	{
+	//		for (j = 0; j < (int)stackPos[i].size(); j++)
+	//		{
+	//			result[counter] = res[j];
+	//			counter++;
+	//		}
+	//	}
+	//}
+	//for (int i = 0; i < NUM_VAL; ++i)
+	//{
+	//	double* res = TBBRadixSortMSDStack(count, stackNeg[i], precision, radix + 1);
+	//	if (NULL != res)
+	//	{
+	//		for (j = (int)stackNeg[i].size() - 1; j >= 1; --j)
+	//		{
+	//			result[counter] = res[j] * (-1);
+	//			counter++;
+	//		}
+	//		result[counter] = res[0] * (-1);
+	//		counter++;
+	//	}
+	//}
+	parallel_for(blocked_range<int>(0, (int)(NUM_VAL - 1), (size_t)grainsize), TBBSortMainLoop(result, len, stackPos,
+		stackNeg, radix, count, counter, precision, 0));
+	parallel_for(blocked_range<int>(0, (int)NUM_VAL, (size_t)grainsize), TBBSortMainLoop(result, len, stackPos,
+		stackNeg, radix, count, counter, precision, 1));
 	return result;
 }
 
