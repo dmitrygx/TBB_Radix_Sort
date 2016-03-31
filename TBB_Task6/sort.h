@@ -19,6 +19,8 @@
 using namespace std;
 
 
+double* TBBRadixSortMSDStack(uint count, stack<double> st, uint precision, uint radix);
+double* TBBRadixSortMSDStackDouble(uint count, stack<double> st, uint precision, uint radix);
 double* TBBRadixSortMSD(const double* array, const uint len, uint precision, uint radix);
 
 #endif
