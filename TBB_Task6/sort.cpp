@@ -207,11 +207,32 @@ double* TBBRadixSortMSD(const double* array, const uint len, uint precision, uin
 	//		counter++;
 	//	}
 	//}
-	parallel_for(blocked_range<int>(0, (int)(NUM_VAL - 1), (size_t)grainsize), TBBSortMainLoop(result, len, stackPos,
+	double **res = new double*[NUM_VAL];
+	for (uint i = 0; i < NUM_VAL; ++i)
+	{
+		res[i] = new double[len];
+	}
+	parallel_for(blocked_range<int>(0, (int)(NUM_VAL - 1), (size_t)grainsize), TBBSortMainLoop(res, len, stackPos,
 		stackNeg, radix, count, counter, precision, 0));
-
-	parallel_for(blocked_range<int>(0, (int)NUM_VAL, (size_t)grainsize), TBBSortMainLoop(result, len, stackPos,
+	for (int i = NUM_VAL - 1; i >= 0; --i)
+	{
+		for (int j = 0; j < (int)stackPos[i].size(); ++j)
+		{
+			result[counter++] = res[i][j];
+		}
+	}
+	parallel_for(blocked_range<int>(0, (int)NUM_VAL, (size_t)grainsize), TBBSortMainLoop(res, len, stackPos,
 		stackNeg, radix, count, counter, precision, 1));
+	for (int i = 0; i < NUM_VAL; ++i)
+	{
+		for (int j = (int)stackNeg[i].size() - 1; j >= 0; --j)
+		{
+			result[counter] = res[i][j] * (-1);
+			counter++;
+		}
+		/*result[counter] = res[i][0] * (-1);
+		counter++;*/
+	}
 	return result;
 }
 

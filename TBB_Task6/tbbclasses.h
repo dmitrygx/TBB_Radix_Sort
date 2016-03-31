@@ -115,7 +115,7 @@ class TBBSortMainLoop
 	stack<double>* stackNeg;
 	stack<double>* stackPos;
 	uint len;
-	double* result;
+	double** res;
 	uint radix;
 	uint count;
 	uint & counter;
@@ -123,9 +123,9 @@ class TBBSortMainLoop
 	bool switchPosToNeg;
 	static mutex Mutex;
 public:
-	TBBSortMainLoop(double* tresult, uint tlen, stack<double> *stPos,
+	TBBSortMainLoop(double** tresult, uint tlen, stack<double> *stPos,
 		stack<double> *stNeg, uint tradix, uint tcount, uint & tcounter, uint tprecision, bool tswitchPosToNeg) :
-		result(tresult), len(tlen), radix(tradix), count(tcount), counter(tcounter), precision(tprecision), switchPosToNeg(tswitchPosToNeg)
+		res(tresult), len(tlen), radix(tradix), count(tcount), counter(tcounter), precision(tprecision), switchPosToNeg(tswitchPosToNeg)
 	{
 		stackPos = stPos;
 		stackNeg = stNeg;
@@ -137,32 +137,21 @@ public:
 		{
 			for (int i = r.end(); i >= r.begin(); --i)
 			{
-				double* res = TBBRadixSortMSDStack(count, stackPos[i], precision, radix + 1);
-				if (NULL != res)
+				res[i] = TBBRadixSortMSDStack(count, stackPos[i], precision, radix + 1);
+				/*if (NULL != res[i])
 				{
 					for (int j = 0; j < (int)stackPos[i].size(); j++)
 					{
-						result[counter] = res[j];
-						counter++;
+						cout << i << " = " << res[i][j] << endl;
 					}
-				}
+				}*/
 			}
 		}
 		else
 		{
 			for (int i = r.begin(); i < r.end(); ++i)
 			{
-				double* res = TBBRadixSortMSDStack(count, stackNeg[i], precision, radix + 1);
-				if (NULL != res)
-				{
-					for (int j = (int)stackNeg[i].size() - 1; j >= 1; --j)
-					{
-						result[counter] = res[j] * (-1);
-						counter++;
-					}
-					result[counter] = res[0] * (-1);
-					counter++;
-				}
+				res[i] = TBBRadixSortMSDStack(count, stackNeg[i], precision, radix + 1);
 			}
 		}
 	}
