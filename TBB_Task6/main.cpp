@@ -16,9 +16,10 @@ int main(int argc, char **argv)
 	task_scheduler_init init;
 
 	(void)TBBParseArgs(argc, argv, min, max, num, precision);
-
-	TBBInitMemoryPool(num * 20);
-
+	TBBInitMemoryPool(num * 64);
+#ifdef openmp
+	omp_set_nested(true);
+#endif
 	double* array = TBBNumRandomGenerate(min, max, num);
 	double* result;
 	if (NULL == array)
@@ -27,9 +28,14 @@ int main(int argc, char **argv)
 		return -1;
 	}
 
-	TBBOutput(true, "omp_array.txt", "Source array:", array, num);
+	TBBOutput(true, "tbb_array.txt", "Source array:", array, num, precision);
 	time_t start = clock();
-	result = TBBRadixSortMSD(array, num, precision, 1);
+	/*for (int i = 0; i < (int) num; ++i)
+	{
+	cout << "arr = " << array[i] << endl;
+	}*/
+	//result = OmpRadixSortMSD(array, num, 0);
+	result = TBBMSDRadixSort(array, num, 0, num);
 	time_t end = clock();
 	time_t diff = end - start;
 	cout << "Time: " << ((double)diff) / CLOCKS_PER_SEC << " sec." << endl;
@@ -38,8 +44,8 @@ int main(int argc, char **argv)
 		cout << "Array hasn't been sorted" << endl;
 		return -1;
 	}
-	TBBOutput(true, "omp_result.txt", "Result of array sorting:", result, num);
-
+	TBBOutput(true, "tbb_result.txt", "Result of array sorting:", result, num, precision);
+	TBBGetMemoryPool()->TBBFree(num, result);
 	TBBTerminateMemoryPool();
 
 	return 0;

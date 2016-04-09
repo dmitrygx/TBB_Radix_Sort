@@ -4,8 +4,12 @@
 #include <iostream>
 #include <fstream>
 #include <cstdlib>
-#include <omp.h>
 #include "numeric.h"
+
+#define GETBIT(x,pos)   ( ((x) & ( 0x1 << (pos) )) !=0 )
+
+#define TBBGetBit(x, pos)	\
+  ((pos) <= 31) ? GETBIT(*(((unsigned int*)&(x)) + 1),(31 - (pos))) : GETBIT(*(((unsigned int*)&(x))),(63 - (pos) + 32))
 
 using namespace std;
 
@@ -33,9 +37,10 @@ public:
 	void TBBMemoryPoolAlloc(uint len);
 	void TBBMemoryPollFree();
 	double* TBBAlloc(uint len);
+	void TBBFree(uint len, double *mem);
 };
 
-void TBBOutput(bool out, const char* file, const char* text, double* array, uint len);
+void TBBOutput(bool out, const char* file, const char* text, double* array, uint len, uint precision);
 
 void TBBParseArgs(int argc, char** argv, double &min, double &max, uint &num, uint &precision);
 

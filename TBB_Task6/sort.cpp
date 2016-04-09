@@ -1,69 +1,21 @@
 #include "sort.h"
 
-//static uint TBBGetCountOfDigitsInteger(int integer)
-//{
-//  int count = (integer == 0) ? 1 : 0;
-//
-//  while (integer != 0)
-//  {
-//	  count++;
-//	  integer /= 10;
-//  }
-//
-//  return count;
-//}
-//
-//static uint TBBGetCountOfDigits(double number, int &integ, double &fract)
-//{
-//  int count = (number == 0.0) ? 1 : 0;
-//  double fraction, integer;
-//  int integerInt = 0;
-//  fraction = modf(number, &integer);
-//  //cout << "fract = " << fraction << " " << "integer = " << integer << endl;
-//  integerInt = (int) integer;
-//  
-//  integ = (int) integer;
-//  fract = fraction;
-//
-//  count = (int)TBBGetCountOfDigitsInteger(integerInt);
-//  
-//  return count;
-//}
-
-static uint TBBGetMaxCountOfDigits(const double* numbers, uint len, int* integ, double* fract)
+double* TBBRadixSortMSDStack(stack<double> st, uint radix)
 {
-	uint max = 0;
-
-	//#pragma omp parallel for schedule(dynamic, CHUNK)
-	 /* for (int i = 0; i < len; ++i)
-	  {
-		uint current = TBBGetCountOfDigits(numbers[i], integ[0], fract[0]);
-		if (current > max)
-		{
-		  max = current;
-		}
-	  }*/
-	int grainsize = 2;
-	parallel_for(blocked_range<int>(0, (int)len, (size_t)grainsize), TBBCountOfDigits(numbers, len, max));
-	return max;
-}
-
-double* TBBRadixSortMSDStackDouble(uint count, stack<double> st, uint precision, uint radix)
-{
-	uint len = st.size();
-	double* result = TBBGetMemoryPool()->TBBAlloc(len);
+	double* result;
 	stack<double> stack[NUM_VAL];
-
+	uint thr1 = 0;
+	uint thr0 = 0;
 	if (st.empty())
 	{
 		return NULL;
 	}
 	else
 	{
-		if (precision < radix)
+		result = TBBGetMemoryPool()->TBBAlloc(st.size());
+		if ((64 == radix) || (st.size() == 1))
 		{
 			uint counter = 0;
-
 			while (!st.empty())
 			{
 				result[counter] = st.top();
@@ -78,161 +30,248 @@ double* TBBRadixSortMSDStackDouble(uint count, stack<double> st, uint precision,
 	{
 		double value = st.top();
 		st.pop();
-		stack[(int)(value * pow(10, radix)) % 10].push(value);
+		(TBBGetBit(value, radix)) == 0 ? thr0++ : thr1++;
+		stack[TBBGetBit(value, radix)].push(value);
 	}
 	uint counter = 0;
-	uint j = 0;
-	//#pragma omp parallel shared(counter, stack) private(j)
+	uint counter1 = 0;
+	int i;
+	double* res1;
+	double* res2;
+	//#pragma omp parallel shared(stack) num_threads(2)
+
+	//#pragma omp sections
+#pragma omp parallel shared(stack) num_threads(2)
 	{
-		//#pragma omp for schedule(dynamic, CHUNK) nowait
-		for (int i = NUM_VAL - 1; i >= 0; i--)
+#pragma omp sections
+	{
+#pragma omp section
+	{
 		{
-			double* res = TBBRadixSortMSDStackDouble(count, stack[i], precision, radix + 1);
-			if (NULL != res)
+			i = 1;
+			res1 = TBBRadixSortMSDStack(stack[i], radix + 1);
+			if (NULL != res1)
 			{
-				for (j = 0; j < stack[i].size(); j++)
+				for (int j = 0; j < (int)stack[i].size(); j++)
 				{
-					result[counter] = res[j];
-					counter++;
+					{
+						result[counter] = res1[j];
+						counter++;
+					}
 				}
 			}
 		}
 	}
+#pragma omp section
+	{
+		{
+			int i1 = 0;
+			res2 = TBBRadixSortMSDStack(stack[i1], radix + 1);
+			if (NULL != res2)
+			{
+				for (int j = 0; j < (int)stack[i1].size(); j++)
+				{
+					{
+						result[thr1 + counter1] = res2[j];
+						counter1++;
+					}
+				}
+			}
+		}
+	}
+	}
+	}
+	TBBGetMemoryPool()->TBBFree(thr1, res1);
+	TBBGetMemoryPool()->TBBFree(thr0, res2);
 	return result;
 }
 
-double* TBBRadixSortMSDStack(uint count, stack<double> st, uint precision, uint radix)
+double* TBBRadixSortMSD(const double* array, const uint len, uint radix)
 {
-	uint len = st.size();
-	double* result = TBBGetMemoryPool()->TBBAlloc(len);
+	double* result;
+		result = TBBGetMemoryPool()->TBBAlloc(len);
 	stack<double> stack[NUM_VAL];
+	uint thr1 = 0;
+	uint thr0 = 0;
+	double val = 0;
+		for (int i = 0; i < (int)len; ++i)
+		{
+				val = array[i];
+				(TBBGetBit(val, radix)) == 0 ? thr0++ : thr1++;
+				stack[TBBGetBit(val, radix)].push(val);
+		}
+	uint counter1 = 0;
+	uint counter2 = 0;
+	int j = 0;
+	double* res1;
+	double* res2;
+	res1 = TBBRadixSortMSDStack(stack[0], radix + 1);
+		if (NULL != res1)
+		{
+				for (j = 0; j < (int)thr0; j++)
+				{
+					result[counter1] = res1[j];
+					counter1++;
+				}
+		}
+		res2 = TBBRadixSortMSDStack(stack[1], radix + 1);
+		if (NULL != res2)
+		{
+					for (j = (int)thr1 - 1; j >= 0; --j)
+					{
+						result[thr0 + counter2] = res2[j];
+						counter2++;
+					}
+		}
+	return result;
+}
 
-	if (st.empty())
+void TBBAddNewElemToAuxArr(double elem, double *arr, unsigned int bit, uint *left0, uint *right1)
+{
+	if (!bit)
+	{
+		arr[*left0] = elem;
+		(*left0)++;
+	}
+	else
+	{
+		(*right1)--;
+		arr[*right1] = elem;
+	}
+}
+
+double* TBBMSDRadixSort(const double* array, const uint len, uint radix, uint full)
+{
+	double *result;
+	double *aux;
+	uint thr1 = 0;
+	uint thr0 = 0;
+	double val = 0;
+	unsigned int bit = 0;
+	uint left0 = 0;
+	uint right1 = len;
+	if (len == 0)
 	{
 		return NULL;
 	}
 	else
 	{
-		if (radix - 1 == count)
+		if ((64 == radix) || (len == 1))
 		{
-			/*uint counter = 0;
-			while (!st.empty())
+			result = TBBGetMemoryPool()->TBBAlloc(len);
+			uint counter = 0;
+			for (int i = 0; i < (int)len; ++i)
 			{
-		  result[counter] = st.top();
-		  //cout << "res[" << counter << "] = " << result[counter] << endl;
-		  cout << "radix = " << radix << " count = " << count << endl;
-		  st.pop();
-		  counter++;
-		  }*/
-			result = TBBRadixSortMSDStackDouble(count, st, precision, 1);
+				result[counter] = array[i];
+				counter++;
+			}
 			return result;
 		}
 	}
-
-	while (!st.empty())
+	result = TBBGetMemoryPool()->TBBAlloc(len);
+	aux = TBBGetMemoryPool()->TBBAlloc(len);
+	for (int i = 0; i < (int)len; ++i)
 	{
-		double value = st.top();
-		st.pop();
-		stack[(int)(value / pow(10, count - radix)) - (int)(value / pow(10, count - (radix - 1))) * 10].push(value);
+		val = array[i];
+		bit = TBBGetBit(val, radix);
+		TBBAddNewElemToAuxArr(val, aux, bit, &left0, &right1);
+		(!bit) ? thr0++ : thr1++;
 	}
-	uint counter = 0;
-	uint j = 0;
-	//#pragma omp parallel shared(counter, stack) private(j)
+	uint counter1 = 0;
+	uint counter2 = 0;
+	double* res1;
+	double* res2;
+	if (len >= 10000)
 	{
-		//#pragma omp for schedule(dynamic, CHUNK) nowait
-		for (int i = NUM_VAL - 1; i >= 0; i--)
+
+		res2 = TBBMSDRadixSort(aux + thr0, thr1, radix + 1, full);
+		if (NULL != res2)
 		{
-			double* res = TBBRadixSortMSDStack(count, stack[i], precision, radix + 1);
-			if (NULL != res)
+			if (0 == radix)
 			{
-				for (j = 0; j < stack[i].size(); j++)
+				for (int j = (int)thr1 - 1; j >= 0; --j)
 				{
-					result[counter] = res[j];
-					counter++;
+					result[counter2] = res2[j];
+					counter2++;
 				}
 			}
+			else
+			{
+				for (int j = 0; j < (int)thr1; j++)
+				{
+					result[thr0 + counter2] = res2[j];
+					counter2++;
+				}
+			}
+			TBBGetMemoryPool()->TBBFree(thr0, res2);
+		}
+		res1 = TBBMSDRadixSort(aux, thr0, radix + 1, full);
+		if (NULL != res1)
+		{
+			if (0 == radix)
+			{
+				for (int j = 0; j < (int)thr0; j++)
+				{
+					result[thr1 + counter1] = res1[j];
+					counter1++;
+				}
+			}
+			else
+			{
+				for (int j = 0; j < (int)thr0; j++)
+				{
+					result[counter1] = res1[j];
+					counter1++;
+				}
+			}
+			TBBGetMemoryPool()->TBBFree(thr1, res1);
 		}
 	}
+	else
+	{
+		res2 = TBBMSDRadixSort(aux + thr0, thr1, radix + 1, full);
+		if (NULL != res2)
+		{
+			if (0 == radix)
+			{
+				for (int j = (int)thr1 - 1; j >= 0; --j)
+				{
+					result[counter2] = res2[j];
+					counter2++;
+				}
+			}
+			else
+			{
+				for (int j = 0; j < (int)thr1; j++)
+				{
+					result[thr0 + counter2] = res2[j];
+					counter2++;
+				}
+			}
+			TBBGetMemoryPool()->TBBFree(thr0, res2);
+		}
+		res1 = TBBMSDRadixSort(aux, thr0, radix + 1, full);
+		if (NULL != res1)
+		{
+			if (0 == radix)
+			{
+				for (int j = 0; j < (int)thr0; j++)
+				{
+					result[thr1 + counter1] = res1[j];
+					counter1++;
+				}
+			}
+			else
+			{
+				for (int j = 0; j < (int)thr0; j++)
+				{
+					result[counter1] = res1[j];
+					counter1++;
+				}
+			}
+			TBBGetMemoryPool()->TBBFree(thr1, res1);
+		}
+	}
+	TBBGetMemoryPool()->TBBFree(len, aux);
 	return result;
 }
-
-double* TBBRadixSortMSD(const double* array, const uint len, uint precision, uint radix)
-{
-	double* result = TBBGetMemoryPool()->TBBAlloc(len);
-
-	stack<double> stackNeg[NUM_VAL];
-	stack<double> stackPos[NUM_VAL];
-
-	int integ[1];
-	double fract[1];
-	int grainsize = 2;
-	uint count = TBBGetMaxCountOfDigits(array, len, integ, fract);
-	double val = 0;
-
-	parallel_for(blocked_range<int>(0, (int)len, (size_t)grainsize), TBBStackDistribution(array, len, stackPos,
-		stackNeg, radix, count));
-	//for (uint i = 0; i < 10; ++i)
-	//{
-	//	while (!stackPos[i].empty())
-	//	{
-	//		cout << i << ": " << stackPos[i].top() << endl;
-	//		stackPos[i].pop();
-	//	}
-	//}
-	uint counter = 0;
-	//int j = 0;
-	//for (int i = NUM_VAL - 1; i >= 0; --i)
-	//{
-	//	double* res = TBBRadixSortMSDStack(count, stackPos[i], precision, radix + 1);
-	//	if (NULL != res)
-	//	{
-	//		for (j = 0; j < (int)stackPos[i].size(); j++)
-	//		{
-	//			result[counter] = res[j];
-	//			counter++;
-	//		}
-	//	}
-	//}
-	//for (int i = 0; i < NUM_VAL; ++i)
-	//{
-	//	double* res = TBBRadixSortMSDStack(count, stackNeg[i], precision, radix + 1);
-	//	if (NULL != res)
-	//	{
-	//		for (j = (int)stackNeg[i].size() - 1; j >= 1; --j)
-	//		{
-	//			result[counter] = res[j] * (-1);
-	//			counter++;
-	//		}
-	//		result[counter] = res[0] * (-1);
-	//		counter++;
-	//	}
-	//}
-	double **res = new double*[NUM_VAL];
-	for (uint i = 0; i < NUM_VAL; ++i)
-	{
-		res[i] = new double[len];
-	}
-	parallel_for(blocked_range<int>(0, (int)(NUM_VAL - 1), (size_t)grainsize), TBBSortMainLoop(res, len, stackPos,
-		stackNeg, radix, count, counter, precision, 0));
-	for (int i = NUM_VAL - 1; i >= 0; --i)
-	{
-		for (int j = 0; j < (int)stackPos[i].size(); ++j)
-		{
-			result[counter++] = res[i][j];
-		}
-	}
-	parallel_for(blocked_range<int>(0, (int)NUM_VAL, (size_t)grainsize), TBBSortMainLoop(res, len, stackPos,
-		stackNeg, radix, count, counter, precision, 1));
-	for (int i = 0; i < NUM_VAL; ++i)
-	{
-		for (int j = (int)stackNeg[i].size() - 1; j >= 0; --j)
-		{
-			result[counter] = res[i][j] * (-1);
-			counter++;
-		}
-		/*result[counter] = res[i][0] * (-1);
-		counter++;*/
-	}
-	return result;
-}
-

@@ -8,19 +8,17 @@
 #include <cmath>
 #include "numeric.h"
 #include "util.h"
-#include "tbbclasses.h"
 
 #ifndef CHUNK 
 #define CHUNK 10
 #endif
 
-#define NUM_VAL 10
+#define NUM_VAL 2
 
 using namespace std;
 
+double* TBBRadixSortMSD(const double* array, const uint len, uint radix);
 
-double* TBBRadixSortMSDStack(uint count, stack<double> st, uint precision, uint radix);
-double* TBBRadixSortMSDStackDouble(uint count, stack<double> st, uint precision, uint radix);
-double* TBBRadixSortMSD(const double* array, const uint len, uint precision, uint radix);
+double* TBBMSDRadixSort(const double* array, const uint len, uint radix, uint full);
 
 #endif

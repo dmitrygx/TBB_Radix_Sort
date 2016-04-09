@@ -3,6 +3,7 @@
 
 #include <iostream>
 #include <cstdlib>
+#include <omp.h>
 #include <cstdio>
 #include "numeric.h"
 #include "util.h"
