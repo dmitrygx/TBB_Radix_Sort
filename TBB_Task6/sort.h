@@ -21,4 +21,6 @@ double* TBBRadixSortMSD(const double* array, const uint len, uint radix);
 
 double* TBBMSDRadixSort(const double* array, const uint len, uint radix, uint full);
 
+void TBBAddNewElemToAuxArr(double elem, double *arr, unsigned int bit, uint *left0, uint *right1);
+
 #endif

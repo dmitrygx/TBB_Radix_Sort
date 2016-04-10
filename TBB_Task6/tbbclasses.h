@@ -7,6 +7,7 @@
 #include "tbb/mutex.h"
 #include <iostream>
 #include <stack>
+#include "sort.h"
 //
 using namespace std;
 using namespace tbb;
@@ -156,3 +157,121 @@ using namespace tbb;
 //		}
 //	}
 //};
+
+class TBBMSDRadixSort1 : public task
+{
+	uint len{ 0 };
+	uint full{ 0 };
+	uint radix{ 0 };
+	double *array;
+	task* execute()
+	{
+		double *aux;
+		uint thr1 = 0;
+		uint thr0 = 0;
+		double val = 0;
+		unsigned int bit = 0;
+		uint left0 = 0;
+		uint right1 = len;
+		uint counter1 = 0;
+		uint counter2 = 0;
+		if (len == 0)
+		{
+			return NULL;
+		}
+		else
+		{
+			if ((64 == radix) || (len == 1))
+			{
+				result = TBBGetMemoryPool()->TBBAlloc(len);
+				uint counter = 0;
+				for (int i = 0; i < (int)len; ++i)
+				{
+					result[counter] = array[i];
+					cout << "res = " << result[counter] << endl;
+					counter++;
+				}
+				return NULL;
+			}
+		}
+		result = TBBGetMemoryPool()->TBBAlloc(len);
+		aux = TBBGetMemoryPool()->TBBAlloc(len);
+		for (int i = 0; i < (int)len; ++i)
+		{
+			val = array[i];
+			bit = TBBGetBit(val, radix);
+			TBBAddNewElemToAuxArr(val, aux, bit, &left0, &right1);
+			(!bit) ? thr0++ : thr1++;
+		}
+		task_list tasks;
+		TBBMSDRadixSort1& tbbSort1 = *new (allocate_child()) TBBMSDRadixSort1(aux + thr0, thr1, radix + 1, full);
+		tasks.push_back(tbbSort1);
+		TBBMSDRadixSort1& tbbSort0 = *new (allocate_child()) TBBMSDRadixSort1(aux, thr0, radix + 1, full);
+		tasks.push_back(tbbSort0);
+		set_ref_count(3);
+		cout << "My radix = " << radix << " refcount = " << ref_count() << endl;
+		spawn_and_wait_for_all(tasks);
+		cout << "My radix = " << radix << " refcount = " << ref_count() << endl;
+
+		if (NULL != tbbSort0.result)
+		{
+			if (0 == radix)
+			{
+				for (int j = 0; j < (int)thr0; j++)
+				{
+					result[thr1 + counter1] = tbbSort0.result[j];
+					cout << radix << ": res0[" << j << "] = " << result[thr1 + counter1] << endl;
+					counter1++;
+				}
+			}
+			else
+			{
+				for (int j = 0; j < (int)thr0; j++)
+				{
+					result[counter1] = tbbSort0.result[j];
+					cout << radix << ": res0[" << j << "] = " << result[counter1] << endl;
+					counter1++;
+				}
+			}
+			//TBBGetMemoryPool()->TBBFree(thr1, tbbSort0.result);
+		}
+		else
+		{
+			cout << "NULL" << endl;
+		}
+
+		if (NULL != tbbSort1.result)
+		{
+			if (0 == radix)
+			{
+				for (int j = (int)thr1 - 1; j >= 0; --j)
+				{
+					result[counter2] = tbbSort1.result[j];
+					cout << radix << ": res1[" << j << "] = " << result[counter2] << endl;
+					counter2++;
+				}
+			}
+			else
+			{
+				for (int j = 0; j < (int)thr1; j++)
+				{
+					result[thr0 + counter2] = tbbSort1.result[j];
+					cout << radix << ": res1[" << j << "] = " << result[thr0 + counter2] << endl;
+					counter2++;
+				}
+			}
+			//TBBGetMemoryPool()->TBBFree(thr0, tbbSort1.result);
+		}
+		else
+		{
+			cout << "NULL" << endl;
+		}
+		TBBGetMemoryPool()->TBBFree(len, aux);
+		return NULL;
+	}
+public:
+	double *result;
+	TBBMSDRadixSort1(double *tarray, uint tlen, uint tradix, uint tfull) :
+		array(tarray), len(tlen), radix(tradix), full(tfull)
+	{}
+};
