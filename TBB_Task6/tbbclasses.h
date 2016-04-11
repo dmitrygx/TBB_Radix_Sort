@@ -233,7 +233,7 @@ class TBBMSDRadixSort1 : public task
 					counter1++;
 				}
 			}
-			//TBBGetMemoryPool()->TBBFree(thr1, tbbSort0.result);
+			TBBGetMemoryPool()->TBBFree(thr0, result0);
 		}
 
 		if (NULL != result1)
@@ -256,7 +256,7 @@ class TBBMSDRadixSort1 : public task
 					counter2++;
 				}
 			}
-			//TBBGetMemoryPool()->TBBFree(thr0, tbbSort1.result);
+			TBBGetMemoryPool()->TBBFree(thr1, result1);
 		}
 		TBBGetMemoryPool()->TBBFree(len, aux);
 		return NULL;
