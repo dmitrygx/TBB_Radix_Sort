@@ -140,9 +140,9 @@ void TBBAddNewElemToAuxArr(double elem, double *arr, unsigned int bit, uint *lef
 	}
 }
 
-double* TBBMSDRadixSort(const double* array, const uint len, uint radix, uint full)
+double* TBBMSDRadixSort(const double* array, const uint len, uint radix, uint full, double *result)
 {
-	double *result;
+	//double *result;
 	double *aux;
 	uint thr1 = 0;
 	uint thr0 = 0;
@@ -158,7 +158,7 @@ double* TBBMSDRadixSort(const double* array, const uint len, uint radix, uint fu
 	{
 		if ((64 == radix) || (len == 1))
 		{
-			result = TBBGetMemoryPool()->TBBAlloc(len);
+			//result = TBBGetMemoryPool()->TBBAlloc(len);
 			uint counter = 0;
 			for (int i = 0; i < (int)len; ++i)
 			{
@@ -168,7 +168,7 @@ double* TBBMSDRadixSort(const double* array, const uint len, uint radix, uint fu
 			return result;
 		}
 	}
-	result = TBBGetMemoryPool()->TBBAlloc(len);
+	//result = TBBGetMemoryPool()->TBBAlloc(len);
 	aux = TBBGetMemoryPool()->TBBAlloc(len);
 	for (int i = 0; i < (int)len; ++i)
 	{
@@ -179,12 +179,10 @@ double* TBBMSDRadixSort(const double* array, const uint len, uint radix, uint fu
 	}
 	uint counter1 = 0;
 	uint counter2 = 0;
-	double* res1;
-	double* res2;
-	if (len >= 10000)
-	{
-
-		res2 = TBBMSDRadixSort(aux + thr0, thr1, radix + 1, full);
+	double* res1 = TBBGetMemoryPool()->TBBAlloc(thr0);;
+	double* res2 = TBBGetMemoryPool()->TBBAlloc(thr1);;
+	
+		TBBMSDRadixSort(aux + thr0, thr1, radix + 1, full, res2);
 		if (NULL != res2)
 		{
 			if (0 == radix)
@@ -205,7 +203,7 @@ double* TBBMSDRadixSort(const double* array, const uint len, uint radix, uint fu
 			}
 			TBBGetMemoryPool()->TBBFree(thr0, res2);
 		}
-		res1 = TBBMSDRadixSort(aux, thr0, radix + 1, full);
+		TBBMSDRadixSort(aux, thr0, radix + 1, full, res1);
 		if (NULL != res1)
 		{
 			if (0 == radix)
@@ -226,52 +224,6 @@ double* TBBMSDRadixSort(const double* array, const uint len, uint radix, uint fu
 			}
 			TBBGetMemoryPool()->TBBFree(thr1, res1);
 		}
-	}
-	else
-	{
-		res2 = TBBMSDRadixSort(aux + thr0, thr1, radix + 1, full);
-		if (NULL != res2)
-		{
-			if (0 == radix)
-			{
-				for (int j = (int)thr1 - 1; j >= 0; --j)
-				{
-					result[counter2] = res2[j];
-					counter2++;
-				}
-			}
-			else
-			{
-				for (int j = 0; j < (int)thr1; j++)
-				{
-					result[thr0 + counter2] = res2[j];
-					counter2++;
-				}
-			}
-			TBBGetMemoryPool()->TBBFree(thr0, res2);
-		}
-		res1 = TBBMSDRadixSort(aux, thr0, radix + 1, full);
-		if (NULL != res1)
-		{
-			if (0 == radix)
-			{
-				for (int j = 0; j < (int)thr0; j++)
-				{
-					result[thr1 + counter1] = res1[j];
-					counter1++;
-				}
-			}
-			else
-			{
-				for (int j = 0; j < (int)thr0; j++)
-				{
-					result[counter1] = res1[j];
-					counter1++;
-				}
-			}
-			TBBGetMemoryPool()->TBBFree(thr1, res1);
-		}
-	}
 	TBBGetMemoryPool()->TBBFree(len, aux);
 	return result;
 }

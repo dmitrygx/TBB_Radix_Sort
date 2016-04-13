@@ -50,4 +50,8 @@ void TBBTerminateMemoryPool(void);
 
 TBBPool *TBBGetMemoryPool(void);
 
+int getCountOfThreads(void);
+
+void setCountOfThreads(int num);
+
 #endif

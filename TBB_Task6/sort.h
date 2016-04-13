@@ -19,7 +19,7 @@ using namespace std;
 
 double* TBBRadixSortMSD(const double* array, const uint len, uint radix);
 
-double* TBBMSDRadixSort(const double* array, const uint len, uint radix, uint full);
+double* TBBMSDRadixSort(const double* array, const uint len, uint radix, uint full, double *result);
 
 void TBBAddNewElemToAuxArr(double elem, double *arr, unsigned int bit, uint *left0, uint *right1);
 

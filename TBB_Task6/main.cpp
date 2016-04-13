@@ -13,13 +13,12 @@ int main(int argc, char **argv)
 {
 	double min, max;
 	uint num, precision;
-	task_scheduler_init init(2);
 
+	setCountOfThreads(4);
+
+	task_scheduler_init init(getCountOfThreads());
 	(void)TBBParseArgs(argc, argv, min, max, num, precision);
 	TBBInitMemoryPool(num * 64);
-#ifdef openmp
-	omp_set_nested(true);
-#endif
 	double* array = TBBNumRandomGenerate(min, max, num);
 	if (NULL == array)
 	{
@@ -29,12 +28,6 @@ int main(int argc, char **argv)
 
 	TBBOutput(true, "tbb_array.txt", "Source array:", array, num, precision);
 	time_t start = clock();
-	/*for (int i = 0; i < (int) num; ++i)
-	{
-	cout << "arr = " << array[i] << endl;
-	}*/
-	//result = OmpRadixSortMSD(array, num, 0);
-	//result = TBBMSDRadixSort(array, num, 0, num);
 	double *result = TBBGetMemoryPool()->TBBAlloc(num);
 	TBBMSDRadixSort1& tbbSort = *new(task::allocate_root()) TBBMSDRadixSort1(array, num, 0, num, result);
 	task::spawn_root_and_wait(tbbSort);

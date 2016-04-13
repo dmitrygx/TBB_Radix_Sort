@@ -10,4 +10,6 @@
 #include "sort.h"
 #include "tbbclasses.h"
 
+int getCountOfThreads(void);
+
 #endif

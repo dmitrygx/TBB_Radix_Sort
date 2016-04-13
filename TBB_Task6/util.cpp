@@ -158,3 +158,15 @@ void TBBTerminateMemoryPool(void)
 	Pool->TBBMemoryPollFree();
 	delete Pool;
 }
+
+static int numOfThreads = 0;
+
+int getCountOfThreads(void)
+{
+	return numOfThreads;
+}
+
+void setCountOfThreads(int num)
+{
+	numOfThreads = num;
+}
